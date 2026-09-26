@@ -6,6 +6,9 @@
 ![Guardrails](https://img.shields.io/badge/Validation-Guardrails%20AI-black)
 ![Security](https://img.shields.io/badge/Focus-LLM%20Security-red)
 
+
+<p align="center"><img src="docs/architecture.svg" alt="llm-security-guardrails architecture" width="100%"></p>
+
 A reusable security boundary for LLM applications that screens prompt injection, redacts sensitive data, enforces request quotas, sanitizes outputs and exposes only constrained tool execution.
 
 ## Security boundary
