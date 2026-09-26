@@ -10,21 +10,20 @@ A reusable security boundary for LLM applications that screens prompt injection,
 
 ## Security boundary
 
-```mermaid
+```text
 flowchart LR
-    U[User Input] --> RL{Rate Limit}
-    RL -->|blocked| B[429]
-    RL -->|allowed| PI{Injection Screen}
-    PI -->|high-risk| X[Reject]
-    PI -->|allowed| PII[PII / Secret Redaction]
-    PII --> LLM[LLM Application]
-    LLM --> OUT[Output Guard]
-    OUT --> SAFE[Sanitized Response]
-
-    LLM --> TOOL{Tool Request}
-    TOOL --> AST[AST Allow-list Sandbox]
-    AST -->|unsafe| X2[Reject Tool Call]
-    AST -->|safe arithmetic| RESULT[Result]
+U[User Input] --> RL{Rate Limit}
+RL -->|blocked| B[429]
+RL -->|allowed| PI{Injection Screen}
+PI -->|high-risk| X[Reject]
+PI -->|allowed| PII[PII / Secret Redaction]
+PII --> LLM[LLM Application]
+LLM --> OUT[Output Guard]
+OUT --> SAFE[Sanitized Response]
+LLM --> TOOL{Tool Request}
+TOOL --> AST[AST Allow-list Sandbox]
+AST -->|unsafe| X2[Reject Tool Call]
+AST -->|safe arithmetic| RESULT[Result] 
 ```
 
 ## Threat-control matrix
@@ -42,14 +41,14 @@ flowchart LR
 
 The calculator **never calls Python `eval` or `exec`**.
 
-```mermaid
+```text
 flowchart TD
-    E[Expression] --> P[ast.parse]
-    P --> V{Node allowed?}
-    V -->|No| R[Reject]
-    V -->|Yes| O{Operator allowed?}
-    O -->|No| R
-    O -->|Yes| C[Compute numeric result]
+E[Expression] --> P[ast.parse]
+P --> V{Node allowed?}
+V -->|No| R[Reject]
+V -->|Yes| O{Operator allowed?}
+O -->|No| R
+O -->|Yes| C[Compute numeric result] 
 ```
 
 Imports, names, function calls, attribute access, comprehensions, file/network access and arbitrary code are rejected.
