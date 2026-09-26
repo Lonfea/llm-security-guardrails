@@ -1,47 +1,82 @@
-# Security Guardrail Middleware
+# LLM Security Guardrail Middleware
 
-A reusable security layer for LLM applications with prompt-injection screening, PII/secret redaction, rate limiting, output sanitization, and constrained tool execution.
+[![CI](https://github.com/Lonfea/llm-security-guardrails/actions/workflows/ci.yml/badge.svg)](https://github.com/Lonfea/llm-security-guardrails/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
+![FastAPI](https://img.shields.io/badge/API-FastAPI-009688)
+![Guardrails](https://img.shields.io/badge/Validation-Guardrails%20AI-black)
+![Security](https://img.shields.io/badge/Focus-LLM%20Security-red)
 
-## Controls
+A reusable security boundary for LLM applications that screens prompt injection, redacts sensitive data, enforces request quotas, sanitizes outputs and exposes only constrained tool execution.
 
-### Prompt injection
-Deterministic high-signal patterns catch common instruction override, secret-exfiltration, and role-hijacking attempts before they reach the model.
+## Security boundary
 
-This is a **defense layer, not a claim of perfect detection**. Production systems should combine deterministic rules with model-based or specialized injection classifiers.
+```mermaid
+flowchart LR
+    U[User Input] --> RL{Rate Limit}
+    RL -->|blocked| B[429]
+    RL -->|allowed| PI{Injection Screen}
+    PI -->|high-risk| X[Reject]
+    PI -->|allowed| PII[PII / Secret Redaction]
+    PII --> LLM[LLM Application]
+    LLM --> OUT[Output Guard]
+    OUT --> SAFE[Sanitized Response]
 
-### PII and secrets
-Guardrails AI validators sanitize personally identifiable information and common secret patterns on both input and output paths.
+    LLM --> TOOL{Tool Request}
+    TOOL --> AST[AST Allow-list Sandbox]
+    AST -->|unsafe| X2[Reject Tool Call]
+    AST -->|safe arithmetic| RESULT[Result]
+```
 
-### Rate limiting
-A thread-safe sliding-window limiter demonstrates per-client quotas. A distributed deployment should move counters to Redis or an API gateway.
+## Threat-control matrix
 
-### Sandboxed execution
-The included calculator never calls Python `eval` or `exec`. It parses the expression into an AST and allows numeric constants plus a small arithmetic operator allow-list only.
+| Threat | Control in this project |
+|---|---|
+| Instruction override | deterministic high-signal injection patterns |
+| Secret/PII leakage | input and output redaction |
+| Request abuse | sliding-window per-client rate limiter |
+| Arbitrary code execution | AST-based arithmetic allow-list |
+| Unsafe model output | output validation/sanitization |
+| Tool escalation | names, calls, imports, attributes and arbitrary execution rejected |
 
-Imports, names, function calls, attribute access, comprehensions, file/network access, and arbitrary code are rejected.
+## Sandboxed calculator
+
+The calculator **never calls Python `eval` or `exec`**.
+
+```mermaid
+flowchart TD
+    E[Expression] --> P[ast.parse]
+    P --> V{Node allowed?}
+    V -->|No| R[Reject]
+    V -->|Yes| O{Operator allowed?}
+    O -->|No| R
+    O -->|Yes| C[Compute numeric result]
+```
+
+Imports, names, function calls, attribute access, comprehensions, file/network access and arbitrary code are rejected.
 
 ## API
 
-- POST /guard/input
-- POST /guard/output
-- POST /tools/calculate
+- **POST `/guard/input`** — screen/redact incoming content
+- **POST `/guard/output`** — sanitize outgoing content
+- **POST `/tools/calculate`** — constrained arithmetic execution
 
-## Run
+## Run locally
 
-    cd ai-engineering-lab/security-guardrails
-    python -m venv .venv
-    source .venv/bin/activate
-    pip install -e ".[dev]"
-    uvicorn app.main:app --reload
+```bash
+git clone https://github.com/Lonfea/llm-security-guardrails.git
+cd llm-security-guardrails
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+uvicorn app.main:app --reload
+```
 
-## Threat-model notes
+## What this demonstrates
 
-This layer is intentionally explicit about what it does **not** solve:
-- indirect injection hidden inside retrieved documents;
-- data poisoning;
-- compromised upstream tools;
-- authorization mistakes;
-- distributed rate limiting;
-- isolation of arbitrary user-supplied code.
+Security middleware design, threat modeling, fail-closed tool constraints, PII/secret handling, rate limiting and tests for adversarial control-plane behavior.
 
-Those require additional controls rather than broader regexes.
+## Security limitations
+
+This repository does **not** claim perfect prompt-injection detection. Additional controls are needed for indirect injection inside retrieved documents, poisoned data, compromised upstream tools, authorization mistakes, distributed rate limiting and true isolation of arbitrary user code.
+
+That distinction is intentional: production AI security requires layered controls rather than one regex or one classifier.
